@@ -18,8 +18,6 @@
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 #include "ExpansionCVs.h"
 #include "core/ActionRegister.h"
-#include "core/PlumedMain.h"
-#include "core/Atoms.h"
 
 namespace PLMD {
 namespace opes {
@@ -105,8 +103,7 @@ PLUMED_REGISTER_ACTION(ECVmultiThermal,"ECV_MULTITHERMAL")
 void ECVmultiThermal::registerKeywords(Keywords& keys)
 {
   ExpansionCVs::registerKeywords(keys);
-  keys.remove("ARG");
-  keys.add("compulsory","ARG","the label of the internal energy of the system. If volume is fixed it is calculated by the \\ref ENERGY colvar");
+  keys.addInputKeyword("compulsory","ARG","scalar","the label of the internal energy of the system. If volume is fixed it is calculated by the ENERGY colvar");
   keys.add("optional","TEMP_MIN","the minimum of the temperature range");
   keys.add("optional","TEMP_MAX","the maximum of the temperature range");
   keys.add("optional","TEMP_STEPS","the number of steps in temperature");
@@ -122,7 +119,7 @@ ECVmultiThermal::ECVmultiThermal(const ActionOptions&ao)
   plumed_massert(getNumberOfArguments()==1,"only the internal energy should be given as ARG");
 
 //set temp0
-  const double temp0=kbt_/plumed.getAtoms().getKBoltzmann();
+  const double temp0=kbt_/getKBoltzmann();
 
 //parse temp range
   double temp_min=-1;
@@ -212,7 +209,7 @@ const double * ECVmultiThermal::getPntrToDerECVs(unsigned j)
 std::vector<std::string> ECVmultiThermal::getLambdas() const
 {
   plumed_massert(!todoAutomatic_,"cannot access lambdas before initializing them");
-  const double temp0=kbt_/plumed.getAtoms().getKBoltzmann();
+  const double temp0=kbt_/getKBoltzmann();
   std::vector<std::string> lambdas(derECVs_.size());
   for(unsigned k=0; k<derECVs_.size(); k++)
   {

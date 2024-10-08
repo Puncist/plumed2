@@ -19,7 +19,7 @@
    You should have received a copy of the GNU Lesser General Public License
    along with plumed.  If not, see <http://www.gnu.org/licenses/>.
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
-#include "ActionRegister.h"
+#include "core/ActionRegister.h"
 #include "Function.h"
 #include "tools/Exception.h"
 #include "tools/Communicator.h"
@@ -60,8 +60,8 @@ public:
   FilesHandler(const std::vector<std::string> &filenames, const bool &parallelread,  Action &myaction, Log &mylog);
   bool readBunch(BiasRepresentation *br, int stride);
   bool scanOneHill(BiasRepresentation *br, IFile *ifile );
-  void getMinMaxBin(std::vector<Value*> vals, Communicator &cc, std::vector<double> &vmin, std::vector<double> &vmax, std::vector<unsigned> &vbin);
-  void getMinMaxBin(std::vector<Value*> vals, Communicator &cc, std::vector<double> &vmin, std::vector<double> &vmax, std::vector<unsigned> &vbin, const std::vector<double> &histosigma);
+  void getMinMaxBin(const std::vector<Value*> & vals, Communicator &cc, std::vector<double> &vmin, std::vector<double> &vmax, std::vector<unsigned> &vbin);
+  void getMinMaxBin(const std::vector<Value*> & vals, Communicator &cc, std::vector<double> &vmin, std::vector<double> &vmax, std::vector<unsigned> &vbin, const std::vector<double> &histosigma);
 };
 FilesHandler::FilesHandler(const std::vector<std::string> &filenames, const bool &parallelread, Action &action, Log &mylog ):filenames(filenames),log(&mylog),parallelread(parallelread),beingread(0),isopen(false) {
   this->action=&action;
@@ -128,7 +128,7 @@ bool FilesHandler::readBunch(BiasRepresentation *br, int stride = -1) {
   }
   return morefiles;
 }
-void FilesHandler::getMinMaxBin(std::vector<Value*> vals, Communicator &cc, std::vector<double> &vmin, std::vector<double> &vmax, std::vector<unsigned> &vbin) {
+void FilesHandler::getMinMaxBin(const std::vector<Value*> & vals, Communicator &cc, std::vector<double> &vmin, std::vector<double> &vmax, std::vector<unsigned> &vbin) {
   // create the representation (no grid)
   BiasRepresentation br(vals,cc);
   // read all the kernels
@@ -136,7 +136,7 @@ void FilesHandler::getMinMaxBin(std::vector<Value*> vals, Communicator &cc, std:
   // loop over the kernels and get the support
   br.getMinMaxBin(vmin,vmax,vbin);
 }
-void FilesHandler::getMinMaxBin(std::vector<Value*> vals, Communicator &cc, std::vector<double> &vmin, std::vector<double> &vmax, std::vector<unsigned> &vbin, const std::vector<double> &histosigma) {
+void FilesHandler::getMinMaxBin(const std::vector<Value*> & vals, Communicator &cc, std::vector<double> &vmin, std::vector<double> &vmax, std::vector<unsigned> &vbin, const std::vector<double> &histosigma) {
   BiasRepresentation br(vals,cc,histosigma);
   // read all the kernels
   readBunch(&br);
@@ -200,7 +200,6 @@ PLUMED_REGISTER_ACTION(FuncSumHills,"FUNCSUMHILLS")
 
 void FuncSumHills::registerKeywords(Keywords& keys) {
   Function::registerKeywords(keys);
-  keys.use("ARG");
   keys.add("optional","HILLSFILES"," source file for hills creation(may be the same as HILLS)"); // this can be a vector!
   keys.add("optional","HISTOFILES"," source file for histogram creation(may be the same as HILLS)"); // also this can be a vector!
   keys.add("optional","HISTOSIGMA"," sigmas for binning when the histogram correction is needed    ");
@@ -221,6 +220,7 @@ void FuncSumHills::registerKeywords(Keywords& keys) {
   keys.addFlag("NOHISTORY",false,"to be used with INITSTRIDE:  it splits the bias/histogram in pieces without previous history  ");
   keys.addFlag("MINTOZERO",false,"translate the resulting bias/histogram to have the minimum to zero  ");
   keys.add("optional","FMT","the format that should be used to output real numbers");
+  keys.setValueDescription("scalar","a scalar");
 }
 
 FuncSumHills::FuncSumHills(const ActionOptions&ao):

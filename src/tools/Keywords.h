@@ -57,11 +57,15 @@ class Keywords {
     }
   };
   friend class Action;
+  friend class ActionShortcut;
+  friend class ActionRegister;
 private:
 /// Is this an action or driver (this bool affects what style==atoms does in print)
   bool isaction;
 /// This allows us to overwrite the behavior of the atoms type in analysis actions
   bool isatoms;
+/// The name of the action that has this set of keywords
+  std::string thisactname;
 /// The names of the allowed keywords
   std::vector<std::string> keys;
 /// The names of the reserved keywords
@@ -72,6 +76,8 @@ private:
   std::map<std::string,bool> allowmultiple;
 /// The documentation for the keywords
   std::map<std::string,std::string> documentation;
+/// The type for the arguments in this action
+  std::map<std::string,std::string> argument_types;
 /// The default values for the flags (are they on or of)
   std::map<std::string,bool> booldefs;
 /// The default values (if there are default values) for compulsory keywords
@@ -86,6 +92,12 @@ private:
   std::map<std::string,std::string> ckey;
 /// The documentation for a particular component
   std::map<std::string,std::string> cdocs;
+/// The type of a particular component
+  std::map<std::string,std::string> ctypes;
+/// The list of actions that are needed by this action
+  std::vector<std::string> neededActions;
+/// List of suffixes that can be used with this action
+  std::vector<std::string> actionNameSuffixes;
 /// Print the documentation for the jth keyword in html
   void print_html_item( const std::string& ) const;
 public:
@@ -159,12 +171,30 @@ public:
   void destroyData();
 /// Set the text that introduces how the components for this action are introduced
   void setComponentsIntroduction( const std::string& instr );
+/// Add the description of the value
+  void setValueDescription( const std::string& type, const std::string& descr );
 /// Add a potential component which can be output by this particular action
+  [[deprecated("Use addOutputComponent with four argument and specify valid types for value from scalar/vector/matrix/grid")]]
   void addOutputComponent( const std::string& name, const std::string& key, const std::string& descr );
+/// Add a potential component which can be output by this particular action
+  void addOutputComponent( const std::string& name, const std::string& key, const std::string& type, const std::string& descr );
+/// Remove a component that can be output by this particular action
+  void removeOutputComponent( const std::string& name );
 /// Has a component with this name been added?
-  bool outputComponentExists( const std::string& name, const bool& custom ) const ;
+  bool outputComponentExists( const std::string& name ) const ;
+/// Check that type for component has been documented correctly
+  bool componentHasCorrectType( const std::string& name, const std::size_t& rank, const bool& hasderiv ) const ;
+/// Create the documentation for a keyword that reads arguments
+  void addInputKeyword( const std::string & t, const std::string & k, const std::string & ttt, const std::string & d );
+  void addInputKeyword( const std::string & t, const std::string & k, const std::string & ttt, const std::string& def, const std::string & d );
+/// Check the documentation of the argument types
+  bool checkArgumentType( const std::size_t& rank, const bool& hasderiv ) const ;
+/// Get the valid types that can be used as argument for this keyword
+  std::string getArgumentType( const std::string& name ) const ;
 /// Get the flag that forces this component to be calculated
   std::string getOutputComponentFlag( const std::string& name ) const ;
+/// Get the type for this output component
+  std::string getOutputComponentType( const std::string& name ) const ;
 /// Get the description of this component
   std::string getOutputComponentDescription( const std::string& name ) const ;
 /// Get the full list of output components
@@ -177,6 +207,16 @@ public:
   std::vector<std::string> getKeys() const { return keys; }
 /// Get the description of a particular keyword
   std::string getTooltip( const std::string& name ) const ;
+/// Note that another actions is required to create this shortcut
+  void needsAction( const std::string& name );
+/// Add a suffix to the list of action name suffixes to test for
+  void addActionNameSuffix( const std::string& suffix );
+/// Get the list of keywords that are needed by this action
+  const std::vector<std::string>& getNeededKeywords() const ;
+/// Return the name of the action that has this set of keywords
+  std::string getDisplayName() const ;
+/// Set the display name
+  void setDisplayName( const std::string& name );
 };
 
 }

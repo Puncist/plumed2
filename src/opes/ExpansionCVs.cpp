@@ -19,8 +19,6 @@
 #include "ExpansionCVs.h"
 
 #include "tools/OpenMP.h"
-#include "core/PlumedMain.h"
-#include "core/Atoms.h"
 
 namespace PLMD {
 namespace opes {
@@ -32,6 +30,7 @@ void ExpansionCVs::registerKeywords(Keywords& keys)
   ActionWithArguments::registerKeywords(keys);
   ActionWithValue::useCustomisableComponents(keys);
   keys.add("compulsory","TEMP","-1","temperature. If not specified tries to get it from MD engine");
+  keys.addInputKeyword("compulsory","ARG","scalar","the labels of the scalar values that are input to this action");
 }
 
 ExpansionCVs::ExpansionCVs(const ActionOptions&ao)
@@ -42,17 +41,8 @@ ExpansionCVs::ExpansionCVs(const ActionOptions&ao)
   , totNumECVs_(0)
 {
 //set kbt_
-  const double kB=plumed.getAtoms().getKBoltzmann();
-  kbt_=plumed.getAtoms().getKbT();
-  double temp=-1;
-  parse("TEMP",temp);
-  if(temp>0)
-  {
-    if(kbt_>0 && std::abs(kbt_-kB*temp)>1e-4)
-      log.printf(" +++ WARNING +++ using TEMP=%g while MD engine uses %g\n",temp,kbt_/kB);
-    kbt_=kB*temp;
-  }
-  plumed_massert(kbt_>0,"your MD engine does not pass the temperature to plumed, you must specify it using TEMP");
+  const double kB=getKBoltzmann();
+  kbt_=getkBT();
   log.printf("  temperature = %g, beta = %g\n",kbt_/kB,1./kbt_);
 
 //set components
@@ -72,6 +62,10 @@ ExpansionCVs::ExpansionCVs(const ActionOptions&ao)
       getPntrToComponent(j)->setNotPeriodic();
   }
   plumed_massert((int)getNumberOfArguments()==getNumberOfComponents(),"Expansion CVs have same number of arguments and components");
+}
+
+std::string ExpansionCVs::getOutputComponentDescription( const std::string& cname, const Keywords& keys ) const {
+  return "the value of the argument named " + cname;
 }
 
 void ExpansionCVs::calculate()

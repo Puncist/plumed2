@@ -7,7 +7,7 @@
    Users are free to download, adapt and use the code as long as it is not for commercial purposes.
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 #include "bias/Bias.h"
-#include "bias/ActionRegister.h"
+#include "core/ActionRegister.h"
 #include "tools/Grid.h"
 #include "tools/Exception.h"
 #include "tools/File.h"
@@ -144,7 +144,6 @@ PLUMED_REGISTER_ACTION(Funnel,"FUNNEL")
 
 void Funnel::registerKeywords(Keywords& keys) {
   Bias::registerKeywords(keys);
-  keys.use("ARG");
   keys.addFlag("NOSPLINE",false,"specifies that no spline interpolation is to be used when calculating the energy and forces due to the external potential");
   keys.addFlag("SPARSE",false,"specifies that the external potential uses a sparse grid");
   keys.addFlag("SPHERE",false, "The Funnel potential including the binding site can be spherical instead of a cone");

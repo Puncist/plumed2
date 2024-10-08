@@ -7,15 +7,13 @@
    Users are free to download, adapt and use the code as long as it is not for commercial purposes.
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 #include "colvar/Colvar.h"
-#include "colvar/ActionRegister.h"
+#include "core/ActionRegister.h"
 #include <string>
 #include <cmath>
 #include <cassert>
 #include <vector>
 #include "tools/Tools.h"
 #include "tools/PDB.h"
-#include "core/PlumedMain.h"
-#include "core/Atoms.h"
 #include <iostream>
 #include "tools/RMSD.h"
 
@@ -124,8 +122,8 @@ void FUNNEL_PS::registerKeywords(Keywords& keys) {
   keys.add("atoms","ANCHOR","Closest protein atom to the ligand, picked to avoid pbc problems during the simulation");
   keys.add("compulsory","POINTS","6 values defining x, y, and z of the 2 points used to construct the line. The order should be A_x,A_y,A_z,B_x,B_y,B_z.");
   keys.addFlag("SQUARED-ROOT",false,"Used to initialize the creation of the alignment variable");
-  keys.addOutputComponent("lp","default","the position along the funnel line");
-  keys.addOutputComponent("ld","default","the distance from the funnel line");
+  keys.addOutputComponent("lp","default","scalar","the position along the funnel line");
+  keys.addOutputComponent("ld","default","scalar","the distance from the funnel line");
 }
 
 FUNNEL_PS::FUNNEL_PS(const ActionOptions&ao):
@@ -152,7 +150,7 @@ FUNNEL_PS::FUNNEL_PS(const ActionOptions&ao):
   checkRead();
 
   // read everything in ang and transform to nm if we are not in natural units
-  if( !pdb.read(reference,plumed.getAtoms().usingNaturalUnits(),0.1/ActionAtomistic::atoms.getUnits().getLength()) )
+  if( !pdb.read(reference,usingNaturalUnits(),0.1/getUnits().getLength()) )
     error("missing input file " + reference );
 
   bool remove_com=true;

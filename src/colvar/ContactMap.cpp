@@ -20,8 +20,9 @@
    along with plumed.  If not, see <http://www.gnu.org/licenses/>.
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 #include "Colvar.h"
+#include "tools/Communicator.h"
 #include "tools/NeighborList.h"
-#include "ActionRegister.h"
+#include "core/ActionRegister.h"
 #include "tools/SwitchingFunction.h"
 
 namespace PLMD {
@@ -137,7 +138,8 @@ void ContactMap::registerKeywords( Keywords& keys ) {
   keys.addFlag("SUM",false,"calculate the sum of all the contacts in the input");
   keys.addFlag("CMDIST",false,"calculate the distance with respect to the provided reference contact map");
   keys.addFlag("SERIAL",false,"Perform the calculation in serial - for debug purpose");
-  keys.addOutputComponent("contact","default","By not using SUM or CMDIST each contact will be stored in a component");
+  keys.addOutputComponent("contact","default","scalar","By not using SUM or CMDIST each contact will be stored in a component");
+  keys.setValueDescription("scalar","the sum of all the switching function on all the distances");
 }
 
 ContactMap::ContactMap(const ActionOptions&ao):

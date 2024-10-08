@@ -106,7 +106,6 @@ public:
 PLUMED_REGISTER_ACTION(JCoupling, "JCOUPLING")
 
 void JCoupling::registerKeywords(Keywords& keys) {
-  componentsAreNotOptional(keys);
   MetainferenceBase::registerKeywords(keys);
   keys.addFlag("NOPBC",false,"ignore the periodic boundary conditions when calculating distances");
   keys.add("numbered", "ATOMS", "the 4 atoms involved in each of the bonds for which you wish to calculate the J-coupling. "
@@ -119,8 +118,8 @@ void JCoupling::registerKeywords(Keywords& keys) {
   keys.add("optional", "C", "Karplus parameter C");
   keys.add("optional", "SHIFT", "Angle shift in radians");
   keys.add("numbered", "COUPLING", "Add an experimental value for each coupling");
-  keys.addOutputComponent("j", "default", "the calculated J-coupling");
-  keys.addOutputComponent("exp", "COUPLING", "the experimental J-coupling");
+  keys.addOutputComponent("j", "default","scalar", "the calculated J-coupling");
+  keys.addOutputComponent("exp", "COUPLING","scalar", "the experimental J-coupling");
 }
 
 JCoupling::JCoupling(const ActionOptions&ao):

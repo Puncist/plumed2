@@ -20,9 +20,8 @@
    along with plumed.  If not, see <http://www.gnu.org/licenses/>.
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 #include "Colvar.h"
-#include "core/Atoms.h"
 #include "core/PlumedMain.h"
-#include "ActionRegister.h"
+#include "core/ActionRegister.h"
 #include "tools/PDB.h"
 #include "tools/RMSD.h"
 #include "tools/Tools.h"
@@ -106,8 +105,8 @@ void PCARMSD::registerKeywords(Keywords& keys) {
   Colvar::registerKeywords(keys);
   keys.add("compulsory","AVERAGE","a file in pdb format containing the reference structure and the atoms involved in the CV.");
   keys.add("compulsory","EIGENVECTORS","a file in pdb format containing the reference structure and the atoms involved in the CV.");
-  keys.addOutputComponent("eig","default","the projections on each eigenvalue are stored on values labeled eig-1, eig-2, ...");
-  keys.addOutputComponent("residual","default","the distance of the present configuration from the configuration supplied as AVERAGE in terms of mean squared displacement after optimal alignment ");
+  keys.addOutputComponent("eig","default","scalar","the projections on each eigenvalue are stored on values labeled eig-1, eig-2, ...");
+  keys.addOutputComponent("residual","default","scalar","the distance of the present configuration from the configuration supplied as AVERAGE in terms of mean squared displacement after optimal alignment ");
   keys.addFlag("SQUARED_ROOT",false," This should be set if you want RMSD instead of mean squared displacement ");
 }
 
@@ -130,7 +129,7 @@ PCARMSD::PCARMSD(const ActionOptions&ao):
   PDB pdb;
 
   // read everything in ang and transform to nm if we are not in natural units
-  if( !pdb.read(f_average,plumed.getAtoms().usingNaturalUnits(),0.1/atoms.getUnits().getLength()) )
+  if( !pdb.read(f_average,usingNaturalUnits(),0.1/getUnits().getLength()) )
     error("missing input file " + f_average );
 
   rmsd=Tools::make_unique<RMSD>();
@@ -177,7 +176,7 @@ PCARMSD::PCARMSD(const ActionOptions&ao):
     while (do_read) {
       PDB mypdb;
       // check the units for reading this file: how can they make sense?
-      do_read=mypdb.readFromFilepointer(fp,plumed.getAtoms().usingNaturalUnits(),0.1/atoms.getUnits().getLength());
+      do_read=mypdb.readFromFilepointer(fp,usingNaturalUnits(),0.1/getUnits().getLength());
       if(do_read) {
         neigenvects++;
         if(mypdb.getAtomNumbers().size()==0) error("number of atoms in a frame should be more than zero");

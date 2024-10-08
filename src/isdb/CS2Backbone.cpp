@@ -40,6 +40,7 @@
 #include "tools/Pbc.h"
 #include "tools/PDB.h"
 #include "tools/Torsion.h"
+#include "tools/Communicator.h"
 
 namespace PLMD {
 namespace isdb {
@@ -498,7 +499,6 @@ public:
 PLUMED_REGISTER_ACTION(CS2Backbone,"CS2BACKBONE")
 
 void CS2Backbone::registerKeywords( Keywords& keys ) {
-  componentsAreNotOptional(keys);
   MetainferenceBase::registerKeywords( keys );
   keys.addFlag("NOPBC",false,"ignore the periodic boundary conditions when calculating distances");
   keys.addFlag("SERIAL",false,"Perform the calculation in serial - for debug purpose");
@@ -508,18 +508,19 @@ void CS2Backbone::registerKeywords( Keywords& keys ) {
   keys.add("compulsory","NEIGH_FREQ","20","Period in step for neighbor list update.");
   keys.addFlag("CAMSHIFT",false,"Set to TRUE if you to calculate a single CamShift score.");
   keys.addFlag("NOEXP",false,"Set to TRUE if you don't want to have fixed components with the experimental values.");
-  keys.addOutputComponent("ha","default","the calculated Ha hydrogen chemical shifts");
-  keys.addOutputComponent("hn","default","the calculated H hydrogen chemical shifts");
-  keys.addOutputComponent("nh","default","the calculated N nitrogen chemical shifts");
-  keys.addOutputComponent("ca","default","the calculated Ca carbon chemical shifts");
-  keys.addOutputComponent("cb","default","the calculated Cb carbon chemical shifts");
-  keys.addOutputComponent("co","default","the calculated C' carbon chemical shifts");
-  keys.addOutputComponent("expha","default","the experimental Ha hydrogen chemical shifts");
-  keys.addOutputComponent("exphn","default","the experimental H hydrogen chemical shifts");
-  keys.addOutputComponent("expnh","default","the experimental N nitrogen chemical shifts");
-  keys.addOutputComponent("expca","default","the experimental Ca carbon chemical shifts");
-  keys.addOutputComponent("expcb","default","the experimental Cb carbon chemical shifts");
-  keys.addOutputComponent("expco","default","the experimental C' carbon chemical shifts");
+  keys.addOutputComponent("ha","default","scalar","the calculated Ha hydrogen chemical shifts");
+  keys.addOutputComponent("hn","default","scalar","the calculated H hydrogen chemical shifts");
+  keys.addOutputComponent("nh","default","scalar","the calculated N nitrogen chemical shifts");
+  keys.addOutputComponent("ca","default","scalar","the calculated Ca carbon chemical shifts");
+  keys.addOutputComponent("cb","default","scalar","the calculated Cb carbon chemical shifts");
+  keys.addOutputComponent("co","default","scalar","the calculated C' carbon chemical shifts");
+  keys.addOutputComponent("expha","default","scalar","the experimental Ha hydrogen chemical shifts");
+  keys.addOutputComponent("exphn","default","scalar","the experimental H hydrogen chemical shifts");
+  keys.addOutputComponent("expnh","default","scalar","the experimental N nitrogen chemical shifts");
+  keys.addOutputComponent("expca","default","scalar","the experimental Ca carbon chemical shifts");
+  keys.addOutputComponent("expcb","default","scalar","the experimental Cb carbon chemical shifts");
+  keys.addOutputComponent("expco","default","scalar","the experimental C' carbon chemical shifts");
+  keys.setValueDescription("scalar","the backbone chemical shifts");
 }
 
 CS2Backbone::CS2Backbone(const ActionOptions&ao):
@@ -559,15 +560,15 @@ CS2Backbone::CS2Backbone(const ActionOptions&ao):
 
   /* Length conversion (parameters are tuned for angstrom) */
   double scale=1.;
-  if(!plumed.getAtoms().usingNaturalUnits()) {
-    scale = 10.*atoms.getUnits().getLength();
+  if(!usingNaturalUnits()) {
+    scale = 10.*getUnits().getLength();
   }
 
   log.printf("  Initialization of the predictor ...\n");
   db.parse(stringadb,scale);
 
   PDB pdb;
-  if( !pdb.read(stringapdb,plumed.getAtoms().usingNaturalUnits(),1./scale) ) plumed_merror("missing input file " + stringapdb);
+  if( !pdb.read(stringapdb,usingNaturalUnits(),1./scale) ) plumed_merror("missing input file " + stringapdb);
 
   // first of all we build the list of chemical shifts we want to predict
   log.printf("  Reading experimental data ...\n"); log.flush();

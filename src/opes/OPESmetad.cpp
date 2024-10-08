@@ -19,7 +19,6 @@
 #include "bias/Bias.h"
 #include "core/PlumedMain.h"
 #include "core/ActionRegister.h"
-#include "core/Atoms.h"
 #include "tools/Communicator.h"
 #include "tools/File.h"
 #include "tools/OpenMP.h"
@@ -303,7 +302,6 @@ template <class mode>
 void OPESmetad<mode>::registerKeywords(Keywords& keys)
 {
   Bias::registerKeywords(keys);
-  keys.use("ARG");
   keys.add("compulsory","TEMP","-1","temperature. If not set, it is taken from MD engine, but not all MD codes provide it");
   keys.add("compulsory","PACE","the frequency for kernel deposition");
   std::string info_sigma("the initial widths of the kernels");
@@ -338,9 +336,9 @@ void OPESmetad<mode>::registerKeywords(Keywords& keys)
   keys.add("optional","STATE_WSTRIDE","number of MD steps between writing the STATE_WFILE. Default is only on CPT events (but not all MD codes set them)");
   keys.addFlag("STORE_STATES",false,"append to STATE_WFILE instead of ovewriting it each time");
 //miscellaneous
-  keys.add("optional","EXCLUDED_REGION","kernels are not deposited when the action provided here has a nonzero value, see example above");
+  keys.addInputKeyword("optional","EXCLUDED_REGION","scalar","kernels are not deposited when the action provided here has a nonzero value, see example above");
   if(!mode::explore)
-    keys.add("optional","EXTRA_BIAS","consider also these other bias potentials for the internal reweighting. This can be used e.g. for sampling a custom target distribution (see example above)");
+    keys.addInputKeyword("optional","EXTRA_BIAS","scalar","consider also these other bias potentials for the internal reweighting. This can be used e.g. for sampling a custom target distribution (see example above)");
   keys.addFlag("CALC_WORK",false,"calculate the total accumulated work done by the bias since last restart");
   keys.addFlag("WALKERS_MPI",false,"switch on MPI version of multiple walkers");
   keys.addFlag("SERIAL",false,"perform calculations in serial");
@@ -349,13 +347,13 @@ void OPESmetad<mode>::registerKeywords(Keywords& keys)
   keys.use("UPDATE_UNTIL");
 
 //output components
-  keys.addOutputComponent("rct","default","estimate of c(t). \\f$\\frac{1}{\\beta}\\log \\langle e^{\\beta V} \\rangle\\f$, should become flat as the simulation converges. Do NOT use for reweighting");
-  keys.addOutputComponent("zed","default","estimate of Z_n. should become flat once no new CV-space region is explored");
-  keys.addOutputComponent("neff","default","effective sample size");
-  keys.addOutputComponent("nker","default","total number of compressed kernels used to represent the bias");
-  keys.addOutputComponent("work","CALC_WORK","total accumulated work done by the bias");
-  keys.addOutputComponent("nlker","NLIST","number of kernels in the neighbor list");
-  keys.addOutputComponent("nlsteps","NLIST","number of steps from last neighbor list update");
+  keys.addOutputComponent("rct","default","scalar","estimate of c(t). log(exp(beta V)/beta, should become flat as the simulation converges. Do NOT use for reweighting");
+  keys.addOutputComponent("zed","default","scalar","estimate of Z_n. should become flat once no new CV-space region is explored");
+  keys.addOutputComponent("neff","default","scalar","effective sample size");
+  keys.addOutputComponent("nker","default","scalar","total number of compressed kernels used to represent the bias");
+  keys.addOutputComponent("work","CALC_WORK","scalar","total accumulated work done by the bias");
+  keys.addOutputComponent("nlker","NLIST","scalar","number of kernels in the neighbor list");
+  keys.addOutputComponent("nlsteps","NLIST","scalar","number of steps from last neighbor list update");
 }
 
 template <class mode>
@@ -372,17 +370,8 @@ OPESmetad<mode>::OPESmetad(const ActionOptions& ao)
   std::string error_in_input2(" could not be read correctly");
 
 //set kbt_
-  const double kB=plumed.getAtoms().getKBoltzmann();
-  kbt_=plumed.getAtoms().getKbT();
-  double temp=-1;
-  parse("TEMP",temp);
-  if(temp>0)
-  {
-    if(kbt_>0 && std::abs(kbt_-kB*temp)>1e-4)
-      log.printf(" +++ WARNING +++ using TEMP=%g while MD engine uses %g\n",temp,kbt_/kB);
-    kbt_=kB*temp;
-  }
-  plumed_massert(kbt_>0,"your MD engine does not pass the temperature to plumed, you must specify it using TEMP");
+  const double kB=getKBoltzmann();
+  kbt_=getkBT();
 
 //other compulsory input
   parse("PACE",stride_);

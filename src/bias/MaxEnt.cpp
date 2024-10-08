@@ -21,7 +21,6 @@
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 #include "Bias.h"
 #include "core/PlumedMain.h"
-#include "core/Atoms.h"
 #include "core/ActionRegister.h"
 #include "core/ActionWithValue.h"
 #include "tools/Communicator.h"
@@ -164,8 +163,6 @@ PLUMED_REGISTER_ACTION(MaxEnt,"MAXENT")
 
 void MaxEnt::registerKeywords(Keywords& keys) {
   Bias::registerKeywords(keys);
-  componentsAreNotOptional(keys);
-  keys.use("ARG");
   keys.add("compulsory","KAPPA","0.0","specifies the initial value for the learning rate");
   keys.add("compulsory","TAU","Specify the dumping time for the learning rate.");
   keys.add("compulsory","TYPE","specify the restraint type. "
@@ -189,13 +186,13 @@ void MaxEnt::registerKeywords(Keywords& keys) {
   keys.addFlag("REWEIGHT",false,"to be used with plumed driver in order to reweight a trajectory a posteriori");
   keys.addFlag("NO_BROADCAST",false,"If active will avoid Lagrangian multipliers to be communicated to other replicas.");
   keys.add("optional","TEMP","the system temperature.  This is required if you are reweighting.");
-  keys.addOutputComponent("force2","default","the instantaneous value of the squared force due to this bias potential");
-  keys.addOutputComponent("work","default","the instantaneous value of the work done by the biasing force");
-  keys.addOutputComponent("_work","default","the instantaneous value of the work done by the biasing force for each argument. "
+  keys.addOutputComponent("force2","default","scalar","the instantaneous value of the squared force due to this bias potential");
+  keys.addOutputComponent("work","default","scalar","the instantaneous value of the work done by the biasing force");
+  keys.addOutputComponent("_work","default","scalar","the instantaneous value of the work done by the biasing force for each argument. "
                           "These quantities will named with the arguments of the bias followed by "
                           "the character string _work.");
-  keys.addOutputComponent("_error","default","Instantaneous values of the discrepancy between the observable and the restraint center");
-  keys.addOutputComponent("_coupling","default","Instantaneous values of Lagrangian multipliers. They are also written by default in a separate output file.");
+  keys.addOutputComponent("_error","default","scalar","Instantaneous values of the discrepancy between the observable and the restraint center");
+  keys.addOutputComponent("_coupling","default","scalar","Instantaneous values of Lagrangian multipliers. They are also written by default in a separate output file.");
   keys.use("RESTART");
 }
 MaxEnt::MaxEnt(const ActionOptions&ao):
@@ -260,10 +257,7 @@ MaxEnt::MaxEnt(const ActionOptions&ao):
   stride_=pace_;  //if no STRIDE is passed, then Lagrangian multipliers willbe printed at each update
   parse("PRINT_STRIDE",stride_);
   if(stride_<=0 ) error("frequency for Lagrangian multipliers printing (STRIDE) is nonsensical");
-  simtemp=0.;
-  parse("TEMP",simtemp);
-  if(simtemp>0) simtemp*=plumed.getAtoms().getKBoltzmann();
-  else simtemp=plumed.getAtoms().getKbT();
+  simtemp=getkBT();
   parseFlag("REWEIGHT",reweight);
   if(simtemp<=0 && reweight) error("Set the temperature (TEMP) if you want to do reweighting.");
 

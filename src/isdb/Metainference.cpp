@@ -21,13 +21,13 @@
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 
 #include "bias/Bias.h"
-#include "bias/ActionRegister.h"
+#include "core/ActionRegister.h"
 #include "core/PlumedMain.h"
-#include "core/Atoms.h"
 #include "core/Value.h"
 #include "tools/File.h"
 #include "tools/OpenMP.h"
 #include "tools/Random.h"
+#include "tools/Communicator.h"
 #include <chrono>
 #include <numeric>
 
@@ -286,8 +286,7 @@ PLUMED_REGISTER_ACTION(Metainference,"METAINFERENCE")
 
 void Metainference::registerKeywords(Keywords& keys) {
   Bias::registerKeywords(keys);
-  keys.use("ARG");
-  keys.add("optional","PARARG","reference values for the experimental data, these can be provided as arguments without derivatives");
+  keys.addInputKeyword("optional","PARARG","scalar","reference values for the experimental data, these can be provided as arguments without derivatives");
   keys.add("optional","PARAMETERS","reference values for the experimental data");
   keys.addFlag("NOENSEMBLE",false,"don't perform any replica-averaging");
   keys.addFlag("REWEIGHT",false,"simple REWEIGHT using the latest ARG as energy");
@@ -323,17 +322,17 @@ void Metainference::registerKeywords(Keywords& keys) {
   keys.add("optional","SELECTOR","name of selector");
   keys.add("optional","NSELECT","range of values for selector [0, N-1]");
   keys.use("RESTART");
-  keys.addOutputComponent("sigma",        "default",      "uncertainty parameter");
-  keys.addOutputComponent("sigmaMean",    "default",      "uncertainty in the mean estimate");
-  keys.addOutputComponent("neff",         "default",      "effective number of replicas");
-  keys.addOutputComponent("acceptSigma",  "default",      "MC acceptance for sigma values");
-  keys.addOutputComponent("acceptScale",  "SCALEDATA",    "MC acceptance for scale value");
-  keys.addOutputComponent("acceptFT",     "GENERIC",      "MC acceptance for general metainference f tilde value");
-  keys.addOutputComponent("weight",       "REWEIGHT",     "weights of the weighted average");
-  keys.addOutputComponent("biasDer",      "REWEIGHT",     "derivatives with respect to the bias");
-  keys.addOutputComponent("scale",        "SCALEDATA",    "scale parameter");
-  keys.addOutputComponent("offset",       "ADDOFFSET",    "offset parameter");
-  keys.addOutputComponent("ftilde",       "GENERIC",      "ensemble average estimator");
+  keys.addOutputComponent("sigma",        "default",      "scalar","uncertainty parameter");
+  keys.addOutputComponent("sigmaMean",    "default",      "scalar","uncertainty in the mean estimate");
+  keys.addOutputComponent("neff",         "default",      "scalar","effective number of replicas");
+  keys.addOutputComponent("acceptSigma",  "default",      "scalar","MC acceptance for sigma values");
+  keys.addOutputComponent("acceptScale",  "SCALEDATA",    "scalar","MC acceptance for scale value");
+  keys.addOutputComponent("acceptFT",     "GENERIC",      "scalar","MC acceptance for general metainference f tilde value");
+  keys.addOutputComponent("weight",       "REWEIGHT",     "scalar","weights of the weighted average");
+  keys.addOutputComponent("biasDer",      "REWEIGHT",     "scalar","derivatives with respect to the bias");
+  keys.addOutputComponent("scale",        "SCALEDATA",    "scalar","scale parameter");
+  keys.addOutputComponent("offset",       "ADDOFFSET",    "scalar","offset parameter");
+  keys.addOutputComponent("ftilde",       "GENERIC",      "scalar","ensemble average estimator");
 }
 
 Metainference::Metainference(const ActionOptions&ao):
@@ -595,10 +594,7 @@ Metainference::Metainference(const ActionOptions&ao):
   parse("MC_STEPS",MCsteps_);
   parse("MC_CHUNKSIZE", MCchunksize_);
   // get temperature
-  double temp=0.0;
-  parse("TEMP",temp);
-  if(temp>0.0) kbt_=plumed.getAtoms().getKBoltzmann()*temp;
-  else kbt_=plumed.getAtoms().getKbT();
+  kbt_ = getkBT();
   if(kbt_==0.0) error("Unless the MD engine passes the temperature to plumed, you must specify it using TEMP");
 
   checkRead();

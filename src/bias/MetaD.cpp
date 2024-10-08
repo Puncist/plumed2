@@ -20,10 +20,9 @@
    along with plumed.  If not, see <http://www.gnu.org/licenses/>.
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 #include "Bias.h"
-#include "ActionRegister.h"
+#include "core/ActionRegister.h"
 #include "core/ActionSet.h"
 #include "core/PlumedMain.h"
-#include "core/Atoms.h"
 #include "core/FlexibleBin.h"
 #include "tools/Exception.h"
 #include "tools/Grid.h"
@@ -31,11 +30,9 @@
 #include "tools/OpenMP.h"
 #include "tools/Random.h"
 #include "tools/File.h"
+#include "tools/Communicator.h"
 #include <ctime>
 #include <numeric>
-#if defined(__PLUMED_HAS_GETCWD)
-#include <unistd.h>
-#endif
 
 namespace PLMD {
 namespace bias {
@@ -523,17 +520,16 @@ PLUMED_REGISTER_ACTION(MetaD,"METAD")
 
 void MetaD::registerKeywords(Keywords& keys) {
   Bias::registerKeywords(keys);
-  keys.addOutputComponent("rbias","CALC_RCT","the instantaneous value of the bias normalized using the c(t) reweighting factor [rbias=bias-rct]."
+  keys.addOutputComponent("rbias","CALC_RCT","scalar","the instantaneous value of the bias normalized using the c(t) reweighting factor [rbias=bias-rct]."
                           "This component can be used to obtain a reweighted histogram.");
-  keys.addOutputComponent("rct","CALC_RCT","the reweighting factor \\f$c(t)\\f$.");
-  keys.addOutputComponent("work","CALC_WORK","accumulator for work");
-  keys.addOutputComponent("acc","ACCELERATION","the metadynamics acceleration factor");
-  keys.addOutputComponent("maxbias", "CALC_MAX_BIAS", "the maximum of the metadynamics V(s, t)");
-  keys.addOutputComponent("transbias", "CALC_TRANSITION_BIAS", "the metadynamics transition bias V*(t)");
-  keys.addOutputComponent("pace","FREQUENCY_ADAPTIVE","the hill addition frequency when employing frequency adaptive metadynamics");
-  keys.addOutputComponent("nlker","NLIST","number of hills in the neighbor list");
-  keys.addOutputComponent("nlsteps","NLIST","number of steps from last neighbor list update");
-  keys.use("ARG");
+  keys.addOutputComponent("rct","CALC_RCT","scalar","the reweighting factor c(t).");
+  keys.addOutputComponent("work","CALC_WORK","scalar","accumulator for work");
+  keys.addOutputComponent("acc","ACCELERATION","scalar","the metadynamics acceleration factor");
+  keys.addOutputComponent("maxbias", "CALC_MAX_BIAS", "scalar","the maximum of the metadynamics V(s, t)");
+  keys.addOutputComponent("transbias", "CALC_TRANSITION_BIAS", "scalar","the metadynamics transition bias V*(t)");
+  keys.addOutputComponent("pace","FREQUENCY_ADAPTIVE","scalar","the hill addition frequency when employing frequency adaptive metadynamics");
+  keys.addOutputComponent("nlker","NLIST","scalar","number of hills in the neighbor list");
+  keys.addOutputComponent("nlsteps","NLIST","scalar","number of steps from last neighbor list update");
   keys.add("compulsory","SIGMA","the widths of the Gaussian hills");
   keys.add("compulsory","PACE","the frequency for hill addition");
   keys.add("compulsory","FILE","HILLS","a file in which the list of added hills is stored");
@@ -551,8 +547,8 @@ void MetaD::registerKeywords(Keywords& keys) {
   keys.add("optional","TAU","in well tempered metadynamics, sets height to (k_B Delta T*pace*timestep)/tau");
   keys.addFlag("CALC_RCT",false,"calculate the c(t) reweighting factor and use that to obtain the normalized bias [rbias=bias-rct]."
                "This method is not compatible with metadynamics not on a grid.");
-  keys.add("optional","RCT_USTRIDE","the update stride for calculating the \\f$c(t)\\f$ reweighting factor."
-           "The default 1, so \\f$c(t)\\f$ is updated every time the bias is updated.");
+  keys.add("optional","RCT_USTRIDE","the update stride for calculating the c(t) reweighting factor."
+           "The default 1, so c(t) is updated every time the bias is updated.");
   keys.add("optional","GRID_MIN","the lower bounds for the grid");
   keys.add("optional","GRID_MAX","the upper bounds for the grid");
   keys.add("optional","GRID_BIN","the number of bins for the grid");
@@ -715,11 +711,7 @@ MetaD::MetaD(const ActionOptions& ao):
     parse("BIASFACTOR",biasf_);
   }
   if( biasf_<1.0  && biasf_!=-1.0) error("well tempered bias factor is nonsensical");
-  parse("DAMPFACTOR",dampfactor_);
-  double temp=0.0;
-  parse("TEMP",temp);
-  if(temp>0.0) kbt_=plumed.getAtoms().getKBoltzmann()*temp;
-  else kbt_=plumed.getAtoms().getKbT();
+  parse("DAMPFACTOR",dampfactor_); kbt_=getkBT();
   if(biasf_>=1.0) {
     if(kbt_==0.0) error("Unless the MD engine passes the temperature to plumed, with well-tempered metad you must specify it using TEMP");
     welltemp_=true;
@@ -1194,18 +1186,14 @@ MetaD::MetaD(const ActionOptions& ao):
       }
     } else {
       // read the grid in input, find the keys
-#ifdef __PLUMED_HAS_GETCWD
       if(walkers_mpi_&&gridreadfilename_.at(0)!='/') {
         //if possible the root replica will share its current folder so that all walkers will read the same file
-        char cwd[4096]= {0};
-        const char* ret=getcwd(cwd,4096);
-        plumed_assert(ret)<<"Name of current directory too long, increase buffer size";
+        const std::string ret = std::filesystem::current_path();
         gridreadfilename_ = "/" + gridreadfilename_;
         gridreadfilename_ = ret + gridreadfilename_;
         if(comm.Get_rank()==0) multi_sim_comm.Bcast(gridreadfilename_,0);
         comm.Bcast(gridreadfilename_,0);
       }
-#endif
       IFile gridfile;
       gridfile.link(*this);
       if(gridfile.FileExist(gridreadfilename_)) {
@@ -1238,18 +1226,14 @@ MetaD::MetaD(const ActionOptions& ao):
     if(result!=0&&result!=mpi_nw_) error("in this WALKERS_MPI run some replica have restarted from GRID while other do not!");
   }
 
-#ifdef __PLUMED_HAS_GETCWD
   if(walkers_mpi_&&mw_dir_==""&&hillsfname.at(0)!='/') {
     //if possible the root replica will share its current folder so that all walkers will read the same file
-    char cwd[4096]= {0};
-    const char* ret=getcwd(cwd,4096);
-    plumed_assert(ret)<<"Name of current directory too long, increase buffer size";
+    const std::string ret = std::filesystem::current_path();
     mw_dir_ = ret;
     mw_dir_ = mw_dir_ + "/";
     if(comm.Get_rank()==0) multi_sim_comm.Bcast(mw_dir_,0);
     comm.Bcast(mw_dir_,0);
   }
-#endif
 
   // creating std::vector of ifile* for hills reading
   // open all files at the beginning and read Gaussians if restarting

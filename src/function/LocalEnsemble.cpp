@@ -20,7 +20,7 @@
    along with plumed.  If not, see <http://www.gnu.org/licenses/>.
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 #include "Function.h"
-#include "ActionRegister.h"
+#include "core/ActionRegister.h"
 #include "tools/OpenMP.h"
 
 namespace PLMD {
@@ -82,6 +82,7 @@ public:
   explicit LocalEnsemble(const ActionOptions&);
   void     calculate() override;
   static void registerKeywords(Keywords& keys);
+  std::string getOutputComponentDescription( const std::string& cname, const Keywords& keys ) const override ;
 };
 
 
@@ -89,7 +90,7 @@ PLUMED_REGISTER_ACTION(LocalEnsemble,"LOCALENSEMBLE")
 
 void LocalEnsemble::registerKeywords(Keywords& keys) {
   Function::registerKeywords(keys);
-  keys.use("ARG");
+  keys.addInputKeyword("numbered","ARG","scalar","the labels of the actions that you want to use");
   keys.add("compulsory","NUM","the number of local replicas");
   useCustomisableComponents(keys);
 }
@@ -127,6 +128,10 @@ LocalEnsemble::LocalEnsemble(const ActionOptions&ao):
   }
 
   log.printf("  averaging over %u replicas.\n", ens_dim);
+}
+
+std::string LocalEnsemble::getOutputComponentDescription( const std::string& cname, const Keywords& keys ) const {
+  return "the average for argument named " + cname;
 }
 
 void LocalEnsemble::calculate()

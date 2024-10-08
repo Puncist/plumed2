@@ -20,7 +20,7 @@
    along with plumed.  If not, see <http://www.gnu.org/licenses/>.
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 #include "Colvar.h"
-#include "ActionRegister.h"
+#include "core/ActionRegister.h"
 #include "tools/Angle.h"
 
 namespace PLMD {
@@ -82,8 +82,9 @@ void ProjectionOnAxis::registerKeywords( Keywords& keys ) {
   Colvar::registerKeywords(keys);
   keys.add("atoms","AXIS_ATOMS","The atoms that define the direction of the axis of interest");
   keys.add("atoms","ATOM","The atom whose position we want to project on the axis of interest");
-  keys.addOutputComponent("proj","COMPONENTS","The value of the projection along the axis");
-  keys.addOutputComponent("ext","COMPONENTS","The value of the extension from the axis");
+  keys.addOutputComponent("proj","COMPONENTS","scalar","The value of the projection along the axis");
+  keys.addOutputComponent("ext","COMPONENTS","scalar","The value of the extension from the axis");
+  keys.setValueDescription("scalar","the value of the projection along the axis");
 }
 
 ProjectionOnAxis::ProjectionOnAxis(const ActionOptions&ao):

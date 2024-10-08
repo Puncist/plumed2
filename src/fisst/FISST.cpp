@@ -16,8 +16,6 @@ along with plumed.  If not, see <http://www.gnu.org/licenses/>.
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 #include "bias/Bias.h"
 #include "core/ActionRegister.h"
-#include "core/Atoms.h"
-#include "core/PlumedMain.h"
 #include "tools/File.h"
 #include "tools/Matrix.h"
 #include "tools/Random.h"
@@ -168,7 +166,6 @@ PLUMED_REGISTER_ACTION(FISST,"FISST")
 
 void FISST::registerKeywords(Keywords& keys) {
   Bias::registerKeywords(keys);
-  keys.use("ARG");
   keys.add("compulsory","PERIOD","Steps corresponding to the learning rate");
   keys.add("optional","RESET_PERIOD","Reset the learning statistics every time this number of steps comes around.");
   keys.add("compulsory","NINTERPOLATE","Number of grid points on which to do interpolation.");
@@ -193,8 +190,8 @@ void FISST::registerKeywords(Keywords& keys) {
   keys.add("optional","OBSERVABLE_FREQ","How often to write out observable weights (default=period).");
   keys.addFlag("FREEZE",false,"Fix bias weights at current level (only used for restarting).");
   keys.use("RESTART");
-  keys.addOutputComponent("force2","default","squared value of force from the bias.");
-  keys.addOutputComponent("_fbar","default", "For each named CV biased, there will be a corresponding output CV_fbar storing the current linear bias prefactor.");
+  keys.addOutputComponent("force2","default","scalar", "squared value of force from the bias.");
+  keys.addOutputComponent("_fbar","default", "scalar", "For each named CV biased, there will be a corresponding output CV_fbar storing the current linear bias prefactor.");
 }
 
 FISST::FISST(const ActionOptions&ao):
@@ -269,8 +266,7 @@ FISST::FISST(const ActionOptions&ao):
     readInRestart();
   } else {
 
-    if(! kbt_ > 0.0)
-      kbt_ = plumed.getAtoms().getKbT();
+    if(! kbt_ > 0.0) kbt_=getkBT();
 
     //in driver, this results in kbt of 0
     if(kbt_ == 0) {

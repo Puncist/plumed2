@@ -42,7 +42,7 @@ inline static bool SubprocessPidGetenvSignals() noexcept {
 class SubprocessPid {
 #ifdef __PLUMED_HAS_SUBPROCESS
 public:
-  pid_t pid;
+  const pid_t pid;
   explicit SubprocessPid(pid_t pid):
     pid(pid)
   {
@@ -51,20 +51,23 @@ public:
   void stop() noexcept {
     // Signals give problems with MPI on Travis.
     // I disable them for now.
-    if(SubprocessPidGetenvSignals()) if(pid!=0 && pid!=-1) kill(pid,SIGSTOP);
+    if(SubprocessPidGetenvSignals()) kill(pid,SIGSTOP);
   }
   void cont() noexcept {
     // Signals give problems with MPI on Travis.
     // I disable them for now.
-    if(SubprocessPidGetenvSignals()) if(pid!=0 && pid!=-1) kill(pid,SIGCONT);
+    if(SubprocessPidGetenvSignals()) kill(pid,SIGCONT);
   }
   ~SubprocessPid() {
-    // this is apparently working also with MPI on Travis.
-    if(pid!=0 && pid!=-1) {
-      int status;
-      kill(pid,SIGINT);
-      waitpid(pid, &status, 0); // Wait for the child process to terminate
-    }
+    // the destructor implies we do not need the subprocess anymore, so SIGKILL
+    // is the fastest exit.
+    // if we want to gracefully kill the process with a delay, it would be cleaner
+    // to have another member function
+    kill(pid,SIGKILL);
+    // Wait for the child process to terminate
+    // This is anyway required to avoid leaks
+    int status;
+    waitpid(pid, &status, 0);
   }
 #endif
 };
@@ -96,8 +99,8 @@ Subprocess::Subprocess(const std::string & cmd) {
     if(dup(pc[0])<0) plumed_error()<<"error duplicating file";
     if(close(pc[1])<0) plumed_error()<<"error closing file";
     if(close(cp[0])<0) plumed_error()<<"error closing file";
-    execv(arr[0],arr);
-    plumed_error()<<"error in script file";
+    auto err=execv(arr[0],arr);
+    plumed_error()<<"error in script file " << cmd << ", execv returned "<<err;
   }
 // PARENT::
   default:

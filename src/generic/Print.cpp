@@ -85,6 +85,7 @@ class Print :
 public:
   void calculate() override {}
   void prepare() override;
+  std::string writeInGraph() const override;
   explicit Print(const ActionOptions&);
   static void registerKeywords(Keywords& keys);
   void apply() override {}
@@ -98,7 +99,7 @@ void Print::registerKeywords(Keywords& keys) {
   Action::registerKeywords(keys);
   ActionPilot::registerKeywords(keys);
   ActionWithArguments::registerKeywords(keys);
-  keys.use("ARG");
+  keys.addInputKeyword("compulsory","ARG","scalar/vector/matrix","the labels of the values that you would like to print to the file");
   keys.add("compulsory","STRIDE","1","the frequency with which the quantities of interest should be output");
   keys.add("optional","FILE","the name of the file on which to output these quantities");
   keys.add("optional","FMT","the format that should be used to output real numbers");
@@ -127,7 +128,10 @@ Print::Print(const ActionOptions&ao):
   parse("FMT",fmt);
   fmt=" "+fmt;
   log.printf("  with format %s\n",fmt.c_str());
-  for(unsigned i=0; i<getNumberOfArguments(); ++i) ofile.setupPrintValue( getPntrToArgument(i) );
+  for(unsigned i=0; i<getNumberOfArguments(); ++i) {
+    ofile.setupPrintValue( getPntrToArgument(i) );
+    getPntrToArgument(i)->buildDataStore(true);
+  }
 /////////////////////////////////////////
 // these are crazy things just for debug:
 // they allow to change regularly the
@@ -142,6 +146,10 @@ Print::Print(const ActionOptions&ao):
   }
 /////////////////////////////////////////
   checkRead();
+}
+
+std::string Print::writeInGraph() const {
+  return getName() + "\n" + "FILE=" + file;
 }
 
 void Print::prepare() {
@@ -165,8 +173,7 @@ void Print::update() {
   ofile.fmtField(" %f");
   ofile.printField("time",getTime());
   for(unsigned i=0; i<getNumberOfArguments(); i++) {
-    ofile.fmtField(fmt);
-    ofile.printField( getPntrToArgument(i), getArgument(i) );
+    ofile.fmtField(fmt); getPntrToArgument(i)->print( ofile );
   }
   ofile.printField();
 }

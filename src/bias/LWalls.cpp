@@ -20,7 +20,7 @@
    along with plumed.  If not, see <http://www.gnu.org/licenses/>.
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 #include "Bias.h"
-#include "ActionRegister.h"
+#include "core/ActionRegister.h"
 
 namespace PLMD {
 namespace bias {
@@ -61,6 +61,16 @@ PRINT ARG=uwall.bias,lwall.bias
 */
 //+ENDPLUMEDOC
 
+//+PLUMEDOC BIAS LOWER_WALLS_SCALAR
+/*
+Defines a wall for the value of one or more collective variables,
+ which limits the region of the phase space accessible during the simulation.
+
+\par Examples
+
+*/
+//+ENDPLUMEDOC
+
 class LWalls : public Bias {
   std::vector<double> at;
   std::vector<double> kappa;
@@ -73,17 +83,17 @@ public:
   static void registerKeywords(Keywords& keys);
 };
 
-PLUMED_REGISTER_ACTION(LWalls,"LOWER_WALLS")
+PLUMED_REGISTER_ACTION(LWalls,"LOWER_WALLS_SCALAR")
 
 void LWalls::registerKeywords(Keywords& keys) {
-  Bias::registerKeywords(keys);
-  keys.use("ARG");
+  Bias::registerKeywords(keys); keys.setDisplayName("LOWER_WALLS");
+  keys.add("hidden","NO_ACTION_LOG","suppresses printing from action on the log");
   keys.add("compulsory","AT","the positions of the wall. The a_i in the expression for a wall.");
   keys.add("compulsory","KAPPA","the force constant for the wall.  The k_i in the expression for a wall.");
   keys.add("compulsory","OFFSET","0.0","the offset for the start of the wall.  The o_i in the expression for a wall.");
   keys.add("compulsory","EXP","2.0","the powers for the walls.  The e_i in the expression for a wall.");
   keys.add("compulsory","EPS","1.0","the values for s_i in the expression for a wall");
-  keys.addOutputComponent("force2","default","the instantaneous value of the squared force due to this bias potential");
+  keys.addOutputComponent("force2","default","scalar","the instantaneous value of the squared force due to this bias potential");
 }
 
 LWalls::LWalls(const ActionOptions&ao):

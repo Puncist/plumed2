@@ -18,7 +18,6 @@ along with plumed.  If not, see <http://www.gnu.org/licenses/>.
 #include "bias/ReweightBase.h"
 #include "core/ActionAtomistic.h"
 #include "core/ActionRegister.h"
-#include "core/Atoms.h"
 #include "core/PlumedMain.h"
 #include "tools/File.h"
 #include "tools/Matrix.h"
@@ -282,13 +281,12 @@ PLUMED_REGISTER_ACTION(EDS, "EDS")
 void EDS::registerKeywords(Keywords &keys)
 {
   Bias::registerKeywords(keys);
-  keys.use("ARG");
   keys.add("optional", "CENTER", "The desired centers (equilibrium values) which will be sought during the adaptive linear biasing. This is for fixed centers");
-  keys.add("optional", "CENTER_ARG", "The desired centers (equilibrium values) which will be sought during the adaptive linear biasing. "
-           "CENTER_ARG is for calculated centers, e.g. from a CV or analysis. ");
+  keys.addInputKeyword("optional", "CENTER_ARG", "scalar", "The desired centers (equilibrium values) which will be sought during the adaptive linear biasing. "
+                       "CENTER_ARG is for calculated centers, e.g. from a CV or analysis. ");
 
   keys.add("optional", "PERIOD", "Steps over which to adjust bias for adaptive or ramping");
-  keys.add("compulsory", "RANGE", "25.0", "The (starting) maximum increase in coupling constant per PERIOD (in \\f$k_B T\\f$/[BIAS_SCALE unit]) for each CV biased");
+  keys.add("compulsory", "RANGE", "25.0", "The (starting) maximum increase in coupling constant per PERIOD (in k_B T/[BIAS_SCALE unit]) for each CV biased");
   keys.add("compulsory", "SEED", "0", "Seed for random order of changing bias");
   keys.add("compulsory", "INIT", "0", "Starting value for coupling constant");
   keys.add("compulsory", "FIXED", "0", "Fixed target values for coupling constant. Non-adaptive.");
@@ -299,7 +297,7 @@ void EDS::registerKeywords(Keywords &keys)
            "Must be in interval [1,0), where 1 indicates all and any other indicates a stochastic update. "
            "If not set, default is 1 / N, where N is the number of CVs. ");
   keys.add("optional", "VIRIAL", "Add an update penalty for having non-zero virial contributions. Only makes sense with multiple correlated CVs.");
-  keys.add("optional", "LOGWEIGHTS", "Add weights to use for computing statistics. For example, if biasing with metadynamics.");
+  keys.addInputKeyword("optional", "LOGWEIGHTS", "scalar", "Add weights to use for computing statistics. For example, if biasing with metadynamics.");
   keys.addFlag("LM", false, "Use Levenberg-Marquadt algorithm along with simultaneous keyword. Otherwise use gradient descent.");
   keys.add("compulsory", "LM_MIXING", "1", "Initial mixing parameter when using Levenberg-Marquadt minimization.");
   keys.add("optional", "RESTART_FMT", "the format that should be used to output real numbers in EDS restarts");
@@ -317,9 +315,9 @@ void EDS::registerKeywords(Keywords &keys)
 
   keys.use("RESTART");
 
-  keys.addOutputComponent("force2", "default", "squared value of force from the bias");
-  keys.addOutputComponent("pressure", "default", "If using virial keyword, this is the current sum of virial terms. It is in units of pressure (energy / vol^3)");
-  keys.addOutputComponent("_coupling", "default", "For each named CV biased, there will be a corresponding output CV_coupling storing the current linear bias prefactor.");
+  keys.addOutputComponent("force2", "default", "scalar", "squared value of force from the bias");
+  keys.addOutputComponent("pressure", "default", "scalar", "If using virial keyword, this is the current sum of virial terms. It is in units of pressure (energy / vol^3)");
+  keys.addOutputComponent("_coupling", "default", "scalar", "For each named CV biased, there will be a corresponding output CV_coupling storing the current linear bias prefactor.");
 }
 
 EDS::EDS(const ActionOptions &ao) : PLUMED_BIAS_INIT(ao),
@@ -386,7 +384,7 @@ EDS::EDS(const ActionOptions &ao) : PLUMED_BIAS_INIT(ao),
   parseVector("FIXED", target_coupling_);
   parseVector("INIT", set_coupling_);
   parse("PERIOD", update_period_);
-  parse("TEMP", temp);
+  kbt_ = getkBT();
   parse("SEED", seed_);
   parse("MULTI_PROP", multi_prop_);
   parse("LM_MIXING", lm_mixing_par_);
@@ -532,11 +530,6 @@ EDS::EDS(const ActionOptions &ao) : PLUMED_BIAS_INIT(ao),
   }
   else
   {
-
-    if (temp >= 0.0)
-      kbt_ = plumed.getAtoms().getKBoltzmann() * temp;
-    else
-      kbt_ = plumed.getAtoms().getKbT();
 
     // in driver, this results in kbt of 0
     if (kbt_ == 0)
@@ -998,7 +991,7 @@ void EDS::update_pseudo_virial()
   {
     // checked in setup to ensure this cast is valid.
     ActionAtomistic *cv = dynamic_cast<ActionAtomistic *>(getPntrToArgument(i)->getPntrToAction());
-    Tensor &v(cv->modifyVirial());
+    Tensor v(cv->getVirial());
     Tensor box(cv->getBox());
     const unsigned int natoms = cv->getNumberOfAtoms();
     if (!volume)

@@ -99,9 +99,8 @@ PLUMED_REGISTER_ACTION(PathMSD,"PATHMSD")
 
 void PathMSD::registerKeywords(Keywords& keys) {
   PathMSDBase::registerKeywords(keys);
-  componentsAreNotOptional(keys);
-  keys.addOutputComponent("sss","default","the position on the path");
-  keys.addOutputComponent("zzz","default","the distance from the path");
+  keys.addOutputComponent("sss","default","scalar","the position on the path");
+  keys.addOutputComponent("zzz","default","scalar","the distance from the path");
 }
 
 PathMSD::PathMSD(const ActionOptions&ao):

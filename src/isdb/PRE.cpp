@@ -89,7 +89,6 @@ public:
 PLUMED_REGISTER_ACTION(PRE,"PRE")
 
 void PRE::registerKeywords( Keywords& keys ) {
-  componentsAreNotOptional(keys);
   MetainferenceBase::registerKeywords(keys);
   keys.addFlag("NOPBC",false,"ignore the periodic boundary conditions when calculating distances");
   keys.addFlag("NORATIO",false,"Set to TRUE if you want to compute PRE without Intensity Ratio");
@@ -104,8 +103,8 @@ void PRE::registerKeywords( Keywords& keys ) {
   keys.add("numbered","RTWO","The relaxation of the atom/atoms in the corresponding GROUPA of atoms. "
            "Keywords like RTWO1, RTWO2, RTWO3,... should be listed.");
   keys.add("numbered","PREINT","Add an experimental value for each PRE.");
-  keys.addOutputComponent("pre","default","the # PRE");
-  keys.addOutputComponent("exp","PREINT","the # PRE experimental intensity");
+  keys.addOutputComponent("pre","default","scalar","the # PRE");
+  keys.addOutputComponent("exp","PREINT","scalar","the # PRE experimental intensity");
 }
 
 PRE::PRE(const ActionOptions&ao):

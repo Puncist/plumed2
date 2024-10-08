@@ -23,7 +23,7 @@
 
 */
 #include "function/Function.h"
-#include "function/ActionRegister.h"
+#include "core/ActionRegister.h"
 #include "core/PlumedMain.h"
 
 namespace PLMD {
@@ -80,8 +80,8 @@ PLUMED_REGISTER_ACTION(Select,"SELECT")
 
 void Select::registerKeywords(Keywords& keys) {
   Function::registerKeywords(keys);
-  keys.use("ARG");
   keys.add("compulsory","SELECTOR","name of the variable used to select");
+  keys.setValueDescription("scalar","the value of the selected argument");
 }
 
 Select::Select(const ActionOptions&ao):
